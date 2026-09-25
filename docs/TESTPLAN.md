@@ -1,0 +1,32 @@
+# COBOL Accounting System Test Plan
+
+This test plan describes the current observable business behavior of the COBOL accounting application. It is intended to be reviewed with business stakeholders before implementing equivalent unit and integration tests in Node.js.
+
+## Scope and test data
+
+- A new application process starts with a balance of `1000.00`.
+- The balance is held in memory by `DataProgram` and is shared by operations during the same process.
+- Amounts use two decimal places and are represented by `PIC 9(6)V99`.
+- `Actual Result` and `Status` are intentionally left for execution. Status must be updated to `Pass` or `Fail` after each test.
+- Cases marked as characterization tests capture current behavior or an open business decision rather than a confirmed business rule.
+
+| Test Case ID | Test Case Description | Pre-conditions | Test Steps | Expected Result | Actual Result | Status (Pass/Fail) | Comments |
+|---|---|---|---|---|---|---|---|
+| TC-001 | Start a new accounting application session | The application is not running and the executable is available. | 1. Start the application. 2. Observe the first menu. | The menu displays options for View Balance, Credit Account, Debit Account, and Exit. The application prompts for a choice from 1 to 4. |  |  |  |
+| TC-002 | Verify the initial account balance | Start a new application session. | 1. Select `1` (View Balance). | The application displays `Current balance: 1000.00`. |  |  | Confirms the initial balance in `DataProgram`. |
+| TC-003 | View the balance without changing it | The application is running with the initial balance. | 1. Select `1`. 2. Select `1` again. | Both balance displays show `1000.00`. Viewing the balance does not change it. |  |  |  |
+| TC-004 | Credit the account with a decimal amount | The application is running with a balance of `1000.00`. | 1. Select `2`. 2. Enter `250.50`. 3. Select `1`. | The application displays a successful credit message and the new balance is `1250.50`. The subsequent balance inquiry also shows `1250.50`. |  |  |  |
+| TC-005 | Credit the account with a whole-number amount | The application is running with a balance of `1000.00`. | 1. Select `2`. 2. Enter `100`. 3. Select `1`. | The new balance is `1100.00`. |  |  |  |
+| TC-006 | Credit the account with zero | The application is running with a balance of `1000.00`. | 1. Select `2`. 2. Enter `0.00`. 3. Select `1`. | The application accepts the credit and the balance remains `1000.00`. |  |  | Characterization case: confirm whether zero-value credits should be allowed. |
+| TC-007 | Debit an amount less than the current balance | The application is running with a balance of `1000.00`. | 1. Select `3`. 2. Enter `300.25`. 3. Select `1`. | The application displays a successful debit message and the new balance is `699.75`. The subsequent balance inquiry also shows `699.75`. |  |  |  |
+| TC-008 | Debit the exact current balance | The application is running with a balance of `1000.00`. | 1. Select `3`. 2. Enter `1000.00`. 3. Select `1`. | The debit is accepted because the balance is greater than or equal to the amount. The new balance is `0.00`. |  |  | Confirms the boundary condition `balance >= debit amount`. |
+| TC-009 | Reject a debit greater than the current balance | The application is running with a balance of `1000.00`. | 1. Select `3`. 2. Enter `1000.01`. 3. Select `1`. | The application displays `Insufficient funds for this debit.` The balance remains `1000.00`. |  |  |  |
+| TC-010 | Confirm that a rejected debit does not persist a change | The application is running with a balance of `1000.00`. | 1. Select `3`. 2. Enter an amount greater than `1000.00`. 3. Select `1`. | No write occurs for the rejected debit, and the balance inquiry still shows `1000.00`. |  |  |  |
+| TC-011 | Confirm that changes persist across multiple operations in one session | The application is running with a balance of `1000.00`. | 1. Credit `200.00`. 2. Debit `50.00`. 3. Select `1`. | The final balance is `1150.00`, demonstrating that each operation uses the balance saved by the preceding operation. |  |  |  |
+| TC-012 | Confirm that the balance resets for a new application process | A previous application process was ended after changing the balance. | 1. Exit the application. 2. Start a new process. 3. Select `1`. | The new process starts with and displays `1000.00`; the prior process's in-memory balance is not retained. |  |  | Confirms current in-memory, process-local persistence. |
+| TC-013 | Enter an invalid menu choice | The application is running. | 1. Enter a menu value other than `1`, `2`, `3`, or `4` (for example, `5`). | The application displays `Invalid choice, please select 1-4.` and continues to display the menu. The balance is unchanged. |  |  |  |
+| TC-014 | Enter a zero menu choice | The application is running. | 1. Enter `0`. 2. Select `1`. | The application treats `0` as invalid, displays the invalid-choice message, and the balance remains unchanged. |  |  |  |
+| TC-015 | Credit with the maximum representable amount | The application is running with a balance that will not overflow when the credit is applied. | 1. Select `2`. 2. Enter `999999.99`. | Record the actual behavior. The input field permits up to six whole-number digits and two decimal places; the business result and overflow handling require stakeholder confirmation. |  |  | Characterization case for the `PIC 9(6)V99` amount limit and arithmetic overflow behavior. |
+| TC-016 | Enter a negative or malformed credit/debit amount | The application is running. | 1. Select `2` or `3`. 2. Enter a negative value or malformed value such as `-10.00` or `abc`. | Record the actual runtime behavior. The current numeric field is unsigned and does not define a user-facing validation message; the desired behavior requires stakeholder confirmation. |  |  | Characterization case for input validation during the Node.js migration. |
+| TC-017 | Exit the application | The application is running. | 1. Select `4`. | The application displays `Exiting the program. Goodbye!` and terminates the process. |  |  |  |
+| TC-018 | Confirm no further menu is shown after exit | The application is running. | 1. Select `4`. 2. Observe the console after the exit message. | The process ends and no additional menu or input prompt is displayed. |  |  |  |
